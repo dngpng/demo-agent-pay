@@ -25,6 +25,7 @@ import {
   vote,
   type DBMessage,
   type Chat,
+  userCredit,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateHashedPassword } from './utils';
@@ -419,6 +420,16 @@ export async function updateChatVisiblityById({
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
     console.error('Failed to update chat visibility in database');
+    throw error;
+  }
+}
+
+export async function getCreditsByUserId(userId: string) {
+  try {
+    const [credit] = await db.select().from(userCredit).where(eq(userCredit.userId, userId));
+    return credit ? credit.balance : "0";
+  } catch (error) {
+    console.error('Failed to get user credits from database', error);
     throw error;
   }
 }

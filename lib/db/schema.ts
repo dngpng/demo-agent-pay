@@ -9,6 +9,7 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  numeric,
 } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('User', {
@@ -150,3 +151,61 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const userCredit = pgTable(
+  'UserCredit',
+  {
+    userId: uuid('userId')
+      .notNull()
+      .references(() => user.id),
+    balance: numeric('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+    updatedAt: timestamp('updatedAt').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId] }),
+  }),
+);
+
+export type UserCredit = InferSelectModel<typeof userCredit>;
+
+export const creditTransaction = pgTable(
+  'CreditTransaction',
+  {
+    id: uuid('id').notNull().defaultRandom(),
+    userId: uuid('userId')
+      .notNull()
+      .references(() => user.id),
+    amount: numeric('amount', { precision: 20, scale: 2 }).notNull(),
+    type: varchar('type', { enum: ['purchase', 'spend', 'refund', 'adjustment'] }).notNull(),
+    description: text('description'),
+    referenceId: uuid('referenceId'), // Optional: link to another entity (e.g. order, payment)
+    createdAt: timestamp('createdAt').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.id] }),
+  }),
+);
+
+export type CreditTransaction = InferSelectModel<typeof creditTransaction>;
+
+export const creditPurchase = pgTable(
+  'CreditPurchase',
+  {
+    id: uuid('id').notNull().defaultRandom(),
+    userId: uuid('userId')
+      .notNull()
+      .references(() => user.id),
+    amount: numeric('amount', { precision: 20, scale: 2 }).notNull(),
+    status: varchar('status', { enum: ['pending', 'completed', 'failed'] }).notNull(),
+    provider: varchar('provider', { length: 64 }).notNull(),
+    providerReference: varchar('providerReference', { length: 128 }),
+    description: text('description'),
+    createdAt: timestamp('createdAt').notNull(),
+    completedAt: timestamp('completedAt'), // Nullable, only set when completed
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.id] }),
+  }),
+);
+
+export type CreditPurchase = InferSelectModel<typeof creditPurchase>;
