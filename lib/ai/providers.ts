@@ -13,6 +13,15 @@ import {
   titleModel,
 } from './models.test';
 
+import { setGlobalDispatcher, ProxyAgent } from "undici";
+
+// Set up proxy for fetch using undici
+if (process.env.http_proxy) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  const proxyAgent = new ProxyAgent(process.env.http_proxy);
+  setGlobalDispatcher(proxyAgent);
+}
+
 export const myProvider = isTestEnvironment
   ? customProvider({
       languageModels: {
