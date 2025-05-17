@@ -26,6 +26,8 @@ import {
   type DBMessage,
   type Chat,
   userCredit,
+  creditTransaction,
+  type CreditTransaction,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateHashedPassword } from './utils';
@@ -433,3 +435,61 @@ export async function getCreditsByUserId(userId: string) {
     throw error;
   }
 }
+
+/**
+ * Update a user's credit balance and record the change in CreditTransaction.
+ *
+ * @param userId - The user's ID
+ * @param amount - The amount to add (positive) or subtract (negative)
+ * @param type - The transaction type ('purchase', 'spend', 'refund', 'adjustment')
+ * @param description - Optional description for the transaction
+ * @param referenceId - Optional reference ID for linking to another entity
+ */
+export async function updateUserCredit({
+  userId,
+  amount,
+  type,
+  description,
+  referenceId,
+}: {
+  userId: string;
+  amount: string; // string to match numeric type
+  type: CreditTransaction['type'];
+  description?: string;
+  referenceId?: string;
+}) {
+  const now = new Date();
+  // Use a transaction for atomicity
+  try {
+    await db.transaction(async (tx) => {
+      // Get current credit
+      const [credit] = await tx.select().from(userCredit).where(eq(userCredit.userId, userId));
+      let newBalance: string;
+      if (credit) {
+        // Update existing balance
+        newBalance = (BigInt(Math.round(Number(credit.balance) * 100)) + BigInt(Math.round(Number(amount) * 100))).toString();
+        newBalance = (Number(newBalance) / 100).toFixed(2);
+        await tx.update(userCredit)
+          .set({ balance: newBalance, updatedAt: now })
+          .where(eq(userCredit.userId, userId));
+      } else {
+        // Create new credit row
+        newBalance = Number(amount).toFixed(2);
+        await tx.insert(userCredit).values({ userId, balance: newBalance, updatedAt: now });
+      }
+      // Insert credit transaction
+      await tx.insert(creditTransaction).values({
+        userId,
+        amount,
+        type,
+        description,
+        referenceId,
+        createdAt: now,
+      });
+    });
+  } catch (error) {
+    console.error('Failed to update user credit and record transaction', error);
+    throw error;
+  }
+}
+
