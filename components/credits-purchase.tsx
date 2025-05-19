@@ -83,13 +83,19 @@ export function CreditsPurchaseConfirmation({
   );
 }
 
-export function CreditsPurchaseLink({ result }: { result: CreditPurchase }) {
+export function CreditsPurchaseLink({
+  result,
+}: { result: CreditPurchase | string }) {
+  const id = typeof result === 'string' ? null : result.id;
+  const fallbackData = typeof result === 'string' ? undefined : result;
+
   const {
     data: purchase,
     isLoading,
     error,
-  } = useSWR<CreditPurchase>(`/api/purchase/${result.id}`, fetcher, {
-    fallbackData: result,
+  } = useSWR<CreditPurchase>(`/api/purchase/${id}`, fetcher, {
+    isPaused: () => id !== null,
+    fallbackData,
     refreshInterval: (data) => {
       if (data?.status === 'pending') {
         return 3000;
@@ -100,6 +106,15 @@ export function CreditsPurchaseLink({ result }: { result: CreditPurchase }) {
   });
 
   const [isPaying, setIsPaying] = useState(false);
+
+  if (typeof result === 'string') {
+    return (
+      <div className="flex gap-2 items-center">
+        <XCircle className="shrink-0size-4 text-destructive" />
+        <p>Error: {result}</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <div>Loading...</div>;

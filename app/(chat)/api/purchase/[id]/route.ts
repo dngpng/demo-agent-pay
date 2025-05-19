@@ -1,5 +1,6 @@
 import { auth } from '@/app/(auth)/auth';
 import { getCreditPurchase } from '@/lib/db/queries';
+import { z } from 'zod';
 
 export async function GET(
   request: Request,
@@ -12,7 +13,7 @@ export async function GET(
   }
 
   const id = params.id;
-  if (!id) {
+  if (!id || !z.string().uuid().safeParse(id).success) {
     return new Response('Missing purchase id', { status: 400 });
   }
 
