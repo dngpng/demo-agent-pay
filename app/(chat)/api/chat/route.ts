@@ -10,8 +10,10 @@ import { systemPrompt } from '@/lib/ai/prompts';
 import {
   deleteChatById,
   getChatById,
+  getCreditsByUserId,
   saveChat,
   saveMessages,
+  updateUserCredit,
 } from '@/lib/db/queries';
 import {
   generateUUID,
@@ -28,6 +30,7 @@ import { myProvider } from '@/lib/ai/providers';
 import { checkCredits } from '@/lib/ai/tools/check-credits';
 import { buyCredit, executeBuyCredit } from '@/lib/ai/tools/buy-credits';
 import { processToolCalls } from '@/lib/ai/utils';
+import { getPaymentMethods } from '@/lib/ai/tools/get-payment-methods';
 
 export const maxDuration = 60;
 
@@ -87,6 +90,7 @@ export async function POST(request: Request) {
         const tools = {
           buyCredit,
           checkCredits: checkCredits({ session }),
+          getPaymentMethods: getPaymentMethods({ session }),
           getWeather,
           createDocument: createDocument({ session, dataStream }),
           updateDocument: updateDocument({ session, dataStream }),
@@ -157,7 +161,21 @@ export async function POST(request: Request) {
                     },
                   ],
                 });
-              } catch (_) {
+
+                const credits = await getCreditsByUserId(session.user.id);
+
+                if (Number(credits) > 0) {
+                  await updateUserCredit({
+                    userId: session.user.id,
+                    amount: (
+                      Math.floor(usage.totalTokens / 100) * -1
+                    ).toString(),
+                    type: 'spend',
+                    referenceId: id,
+                  });
+                }
+              } catch (error) {
+                console.error(error);
                 console.error('Failed to save chat');
               }
             }

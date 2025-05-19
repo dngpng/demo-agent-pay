@@ -54,8 +54,7 @@ export default function CreditsCheck({
   return (
     <div className="border border-dashed p-4 rounded-2xl flex justify-between items-center">
       <p>
-        Your current credits:{' '}
-        <strong>{Number(balance) < 0 ? 0 : Number(balance)}</strong>
+        Your current credits: <strong>{Number(balance)}</strong>
       </p>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>

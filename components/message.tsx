@@ -195,6 +195,8 @@ const PurePreviewMessage = ({
                       ) : toolName === 'buyCredit' ? (
                         <CreditsPurchaseConfirmation
                           args={args}
+                          isReadonly={isReadonly}
+                          isLoading={isLoading}
                           onConfirm={() =>
                             addToolResult({
                               toolCallId,

@@ -5,21 +5,26 @@ import { Button } from './ui/button';
 import type { BuyCreditParams } from '@/lib/ai/tools/buy-credits';
 import Link from 'next/link';
 import { useState } from 'react';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 export function CreditsPurchaseConfirmation({
   args,
+  isReadonly,
+  isLoading,
   onConfirm,
   onCancel,
 }: {
   args: BuyCreditParams;
   onConfirm: () => void;
   onCancel: () => void;
+  isReadonly: boolean;
+  isLoading: boolean;
 }) {
   const { amountToPurchase, paymentMethodId } = args;
 
   const {
     data: methods,
-    isLoading,
+    isLoading: isLoadingMethods,
     error,
   } = useSWR<UserPaymentMethod[]>('/api/payment/method', fetcher);
 
@@ -29,7 +34,7 @@ export function CreditsPurchaseConfirmation({
     return <div>Error: Payment method not found</div>;
   }
 
-  if (isLoading) {
+  if (isLoadingMethods) {
     return <div>Loading...</div>;
   }
 
@@ -58,12 +63,22 @@ export function CreditsPurchaseConfirmation({
         </p>
       </div>
 
-      <div className="flex gap-2 mt-4">
-        <Button onClick={onConfirm}>Confirm</Button>
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
+      {isLoading ? (
+        <div>
+          <Button disabled={true} variant="secondary">
+            Submitting ...
+          </Button>
+        </div>
+      ) : (
+        <div className="flex gap-2 mt-4">
+          <Button onClick={onConfirm} disabled={isReadonly}>
+            Confirm
+          </Button>
+          <Button variant="outline" onClick={onCancel} disabled={isReadonly}>
+            Cancel
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -100,7 +115,8 @@ export function CreditsPurchaseLink({ result }: { result: CreditPurchase }) {
 
   if (purchase.status === 'completed') {
     return (
-      <div>
+      <div className="flex gap-2 items-center">
+        <CheckCircle2 className="shrink-0size-4 text-green-500" />
         <p>Purchase completed.</p>
       </div>
     );
@@ -108,7 +124,8 @@ export function CreditsPurchaseLink({ result }: { result: CreditPurchase }) {
 
   if (purchase.status === 'failed') {
     return (
-      <div>
+      <div className="flex gap-2 items-center">
+        <XCircle className="shrink-0size-4 text-destructive" />
         <p>Purchase failed. Please try again.</p>
       </div>
     );
@@ -116,7 +133,12 @@ export function CreditsPurchaseLink({ result }: { result: CreditPurchase }) {
 
   if (purchase.status === 'pending') {
     if (!purchase.providerReference) {
-      return <div>Error: Purchase not found</div>;
+      return (
+        <div className="flex gap-2 items-center">
+          <XCircle className="shrink-0size-4 text-destructive" />
+          <p>Purchase not found</p>
+        </div>
+      );
     }
 
     return (

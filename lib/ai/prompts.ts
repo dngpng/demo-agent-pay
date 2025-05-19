@@ -36,6 +36,10 @@ export const regularPrompt =
 
 export const creditsPrompt = `
 You must always use the tool \`checkCredits\` to check if the user has enough credits before giving any response (unless the user wants to buy credits). If user does not have enough credits, kindly ask the user to buy more credits.
+
+If the user wants to buy credits, use the tool \`buyCredits\` to buy credits. Do not add additional response when the \`buyCredits\` tool call is successful.
+
+If the user does not provide enough information when buying credits, ask the user to provide more information. The tool \`getPaymentMethods\` can be used to get the payment methods for the user.
 `;
 
 export const systemPrompt = ({

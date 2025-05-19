@@ -4,13 +4,13 @@ import { verify } from 'ripple-keypairs';
 export async function verifySignature({
   signature,
   payload,
-  walletAddress,
+  walletPublicKey,
   timestampTolerance = 1000 * 60 * 1, // 1 minutes
   mode = 'evm',
 }: {
   signature: string | undefined;
   payload: Record<string, string> & { timestamp?: number };
-  walletAddress: string;
+  walletPublicKey: string;
   timestampTolerance?: number;
   mode?: 'evm' | 'xrp';
 }): Promise<
@@ -52,11 +52,11 @@ export async function verifySignature({
 
   const verified =
     mode === 'xrp'
-      ? await verfityXrpMessage(payloadString, signature, walletAddress)
+      ? await verfityXrpMessage(payloadString, signature, walletPublicKey)
       : await verifyEvmMessage({
           message: payloadString,
           signature: signature as `0x${string}`,
-          address: walletAddress as `0x${string}`,
+          address: walletPublicKey as `0x${string}`,
         });
 
   return verified
@@ -67,9 +67,10 @@ export async function verifySignature({
 async function verfityXrpMessage(
   message: string,
   signature: string,
-  walletAddress: string,
+  walletPublicKey: string,
 ) {
   const messageHex = Buffer.from(message, 'utf8').toString('hex');
+  const publicKeyHex = Buffer.from(walletPublicKey, 'hex').toString('hex');
 
-  return verify(messageHex, signature, walletAddress);
+  return verify(messageHex, signature, publicKeyHex);
 }

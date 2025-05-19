@@ -26,12 +26,12 @@ export async function POST(
     return new Response('Invalid type', { status: 400 });
   }
 
-  const walletAddress =
+  const walletPublicKey =
     type === 'evm'
-      ? process.env.AGENT_WALLET_ADDRESS_EVM
-      : process.env.AGENT_WALLET_ADDRESS_XRP;
+      ? process.env.AGENT_WALLET_EVM
+      : process.env.AGENT_WALLET_XRP;
 
-  if (!walletAddress) {
+  if (!walletPublicKey) {
     console.error('Wallet address not setup');
     return new Response('Wallet address not setup', { status: 500 });
   }
@@ -52,7 +52,7 @@ export async function POST(
   const { verified, error } = await verifySignature({
     signature,
     payload: body,
-    walletAddress,
+    walletPublicKey,
     mode: type,
   });
 
@@ -98,6 +98,10 @@ async function handlePurchase({
 
   if (!purchase) {
     return new Response('Purchase not found', { status: 404 });
+  }
+
+  if (purchase.status !== 'pending') {
+    return new Response('Purchase is not pending', { status: 400 });
   }
 
   try {
