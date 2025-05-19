@@ -120,13 +120,15 @@ export function CreditsPurchaseLink({ result }: { result: CreditPurchase }) {
     }
 
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 items-start">
         <p>
           Please click the following button to complete the payment on AgentPay.
         </p>
 
         {isPaying ? (
-          <Button disabled={true}>Waiting for confirmation ...</Button>
+          <Button disabled={true} className="">
+            Waiting for confirmation ...
+          </Button>
         ) : (
           <Link
             href={`https://alpha.agentlayer.xyz/pay/${result.providerReference}`}

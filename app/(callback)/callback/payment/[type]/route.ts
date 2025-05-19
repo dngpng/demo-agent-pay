@@ -1,12 +1,11 @@
 import type { NextRequest } from 'next/server';
-import { verifySignature } from '@agentstudio/sdk';
-import { verify } from 'ripple-keypairs';
 import { z } from 'zod';
 import {
   getPurchaseByPaymentId,
   updateCreditPurchase,
   updateUserCredit,
 } from '@/lib/db/queries';
+import { verifySignature } from '@/lib/signature';
 
 const paymentCallbackPayloadSchema = z.object({
   paymentId: z.string(),
@@ -29,10 +28,11 @@ export async function POST(
 
   const walletAddress =
     type === 'evm'
-      ? process.env.AGENTPAY_WALLET_ADDRESS_EVM
-      : process.env.AGENTPAY_WALLET_ADDRESS_XRP;
+      ? process.env.AGENT_WALLET_ADDRESS_EVM
+      : process.env.AGENT_WALLET_ADDRESS_XRP;
 
   if (!walletAddress) {
+    console.error('Wallet address not setup');
     return new Response('Wallet address not setup', { status: 500 });
   }
 
@@ -53,7 +53,7 @@ export async function POST(
     signature,
     payload: body,
     walletAddress,
-    verifier: type === 'evm' ? undefined : verifyXrpSignature,
+    mode: type,
   });
 
   if (!verified) {
@@ -83,16 +83,6 @@ export async function POST(
     default:
       return new Response(`Unknown event name: ${eventName}`, { status: 400 });
   }
-}
-
-async function verifyXrpSignature(
-  message: string,
-  signature: string,
-  walletAddress: string,
-) {
-  const messageHex = Buffer.from(message, 'utf8').toString('hex');
-
-  return verify(messageHex, signature, walletAddress);
 }
 
 async function handlePurchase({

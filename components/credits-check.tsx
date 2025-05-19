@@ -27,6 +27,7 @@ export default function CreditsCheck({
   const { isEnough, balance } = result;
   const [amount, setAmount] = useState('');
   const [paymentMethodId, setPaymentMethodId] = useState('');
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const {
     data: methods,
     isLoading,
@@ -47,6 +48,7 @@ export default function CreditsCheck({
     onSubmit(amount, selectedMethod);
     setAmount('');
     setPaymentMethodId('');
+    setPopoverOpen(false);
   };
 
   return (
@@ -55,7 +57,7 @@ export default function CreditsCheck({
         Your current credits:{' '}
         <strong>{Number(balance) < 0 ? 0 : Number(balance)}</strong>
       </p>
-      <Popover>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
           <Button className="shrink-0" variant="secondary">
             Buy Credits
