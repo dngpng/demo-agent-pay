@@ -115,9 +115,9 @@ export default function CreditsCheck({
                     </SelectItem>
                   )}
                   {methods?.length === 0 && (
-                    <SelectItem value="" disabled>
-                      No methods
-                    </SelectItem>
+                    <div className="text-center py-2 text-sm text-muted-foreground">
+                      No payment methods
+                    </div>
                   )}
                   {methods?.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
