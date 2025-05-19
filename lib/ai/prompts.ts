@@ -1,4 +1,4 @@
-import { ArtifactKind } from '@/components/artifact';
+import type { ArtifactKind } from '@/components/artifact';
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -34,6 +34,10 @@ Do not update document right after creating it. Wait for user feedback or reques
 export const regularPrompt =
   'You are a friendly assistant! Keep your responses concise and helpful.';
 
+export const creditsPrompt = `
+You must always use the tool \`checkCredits\` to check if the user has enough credits before giving any response (unless the user wants to buy credits). If user does not have enough credits, kindly ask the user to buy more credits.
+`;
+
 export const systemPrompt = ({
   selectedChatModel,
 }: {
@@ -42,7 +46,7 @@ export const systemPrompt = ({
   if (selectedChatModel === 'chat-model-reasoning') {
     return regularPrompt;
   } else {
-    return `${regularPrompt}\n\n${artifactsPrompt}`;
+    return `${regularPrompt}\n\n${creditsPrompt}\n\n${artifactsPrompt}`;
   }
 };
 

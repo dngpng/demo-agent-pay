@@ -28,6 +28,9 @@ import {
   userCredit,
   creditTransaction,
   type CreditTransaction,
+  creditPurchase,
+  userPaymentMethod,
+  type CreditPurchase,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateHashedPassword } from './utils';
@@ -182,7 +185,7 @@ export async function saveMessages({
   messages: Array<DBMessage>;
 }) {
   try {
-    return await db.insert(message).values(messages);
+    return await db.insert(message).values(messages).onConflictDoNothing();
   } catch (error) {
     console.error('Failed to save messages in database', error);
     throw error;
@@ -428,8 +431,11 @@ export async function updateChatVisiblityById({
 
 export async function getCreditsByUserId(userId: string) {
   try {
-    const [credit] = await db.select().from(userCredit).where(eq(userCredit.userId, userId));
-    return credit ? credit.balance : "0";
+    const [credit] = await db
+      .select()
+      .from(userCredit)
+      .where(eq(userCredit.userId, userId));
+    return credit ? credit.balance : '0';
   } catch (error) {
     console.error('Failed to get user credits from database', error);
     throw error;
@@ -463,19 +469,28 @@ export async function updateUserCredit({
   try {
     await db.transaction(async (tx) => {
       // Get current credit
-      const [credit] = await tx.select().from(userCredit).where(eq(userCredit.userId, userId));
+      const [credit] = await tx
+        .select()
+        .from(userCredit)
+        .where(eq(userCredit.userId, userId));
       let newBalance: string;
       if (credit) {
         // Update existing balance
-        newBalance = (BigInt(Math.round(Number(credit.balance) * 100)) + BigInt(Math.round(Number(amount) * 100))).toString();
+        newBalance = (
+          BigInt(Math.round(Number(credit.balance) * 100)) +
+          BigInt(Math.round(Number(amount) * 100))
+        ).toString();
         newBalance = (Number(newBalance) / 100).toFixed(2);
-        await tx.update(userCredit)
+        await tx
+          .update(userCredit)
           .set({ balance: newBalance, updatedAt: now })
           .where(eq(userCredit.userId, userId));
       } else {
         // Create new credit row
         newBalance = Number(amount).toFixed(2);
-        await tx.insert(userCredit).values({ userId, balance: newBalance, updatedAt: now });
+        await tx
+          .insert(userCredit)
+          .values({ userId, balance: newBalance, updatedAt: now });
       }
       // Insert credit transaction
       await tx.insert(creditTransaction).values({
@@ -493,3 +508,108 @@ export async function updateUserCredit({
   }
 }
 
+/**
+ * Create a credit purchase record in the database.
+ * @param userId - The user's ID
+ * @param amount - The amount of credits purchased
+ * @param description - Optional description for the purchase
+ * @param provider - The payment provider ('AgentPay-EVM' or 'AgentPay-XRP')
+ */
+export async function createCreditPurchase({
+  userId,
+  amount,
+  description,
+  paymentMethodId,
+  provider,
+  providerReference,
+}: {
+  userId: string;
+  amount: string;
+  description?: string;
+  paymentMethodId: string;
+  provider: 'AgentPay-EVM' | 'AgentPay-XRP';
+  providerReference: string;
+}) {
+  try {
+    return await db
+      .insert(creditPurchase)
+      .values({
+        userId,
+        amount,
+        description,
+        paymentMethodId,
+        provider,
+        providerReference,
+        createdAt: new Date(),
+        status: 'pending',
+      })
+      .returning();
+  } catch (error) {
+    console.error('Failed to create credit purchase in database', error);
+    throw error;
+  }
+}
+
+export async function getPurchaseByPaymentId({
+  paymentId,
+}: {
+  paymentId: string;
+}) {
+  const [purchase] = await db
+    .select()
+    .from(creditPurchase)
+    .where(and(eq(creditPurchase.providerReference, paymentId)));
+
+  return purchase;
+}
+
+export async function updateCreditPurchase({
+  id,
+  status,
+  metadata,
+}: {
+  id: string;
+  status: CreditPurchase['status'];
+  metadata: Record<string, any>;
+}) {
+  try {
+    return await db
+      .update(creditPurchase)
+      .set({ status, metadata })
+      .where(eq(creditPurchase.id, id));
+  } catch (error) {
+    console.error('Failed to update credit purchase in database', error);
+    throw error;
+  }
+}
+
+export async function getCreditPurchase({
+  id,
+  userId,
+}: {
+  id: string;
+  userId: string;
+}) {
+  try {
+    const [purchase] = await db
+      .select()
+      .from(creditPurchase)
+      .where(and(eq(creditPurchase.id, id), eq(creditPurchase.userId, userId)));
+    return purchase;
+  } catch (error) {
+    console.error('Failed to get credit purchase by id from database', error);
+    throw error;
+  }
+}
+
+export async function getUserPaymentMethods(userId: string) {
+  try {
+    return await db
+      .select()
+      .from(userPaymentMethod)
+      .where(eq(userPaymentMethod.userId, userId));
+  } catch (error) {
+    console.error('Failed to get user payment methods from database', error);
+    throw error;
+  }
+}

@@ -50,6 +50,20 @@
       "when": 1747384949134,
       "tag": "0006_flippant_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1747618216929,
+      "tag": "0007_jittery_santa_claus",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1747635154420,
+      "tag": "0008_nostalgic_gorgon",
+      "breakpoints": true
     }
   ]
 }

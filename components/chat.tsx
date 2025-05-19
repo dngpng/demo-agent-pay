@@ -38,6 +38,7 @@ export function Chat({
     input,
     setInput,
     append,
+    addToolResult,
     status,
     stop,
     reload,
@@ -64,6 +65,19 @@ export function Chat({
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
+  const toolsRequiringConfirmation = ['buyCredits'];
+
+  const pendingToolCallConfirmation = messages.some((m) =>
+    m.parts?.some(
+      (part) =>
+        part.type === 'tool-invocation' &&
+        part.toolInvocation.state === 'call' &&
+        toolsRequiringConfirmation.includes(part.toolInvocation.toolName),
+    ),
+  );
+
+  console.log({ messages });
+
   return (
     <>
       <div className="flex flex-col min-w-0 h-dvh bg-background">
@@ -83,6 +97,8 @@ export function Chat({
           reload={reload}
           isReadonly={isReadonly}
           isArtifactVisible={isArtifactVisible}
+          append={append}
+          addToolResult={addToolResult}
         />
 
         <form className="flex mx-auto px-4 bg-background pb-4 md:pb-6 gap-2 w-full md:max-w-3xl">
@@ -99,6 +115,7 @@ export function Chat({
               messages={messages}
               setMessages={setMessages}
               append={append}
+              disabled={pendingToolCallConfirmation}
             />
           )}
         </form>
@@ -119,6 +136,7 @@ export function Chat({
         reload={reload}
         votes={votes}
         isReadonly={isReadonly}
+        addToolResult={addToolResult}
       />
     </>
   );

@@ -14,6 +14,14 @@ interface MessagesProps {
   messages: Array<UIMessage>;
   setMessages: UseChatHelpers['setMessages'];
   reload: UseChatHelpers['reload'];
+  append: UseChatHelpers['append'];
+  addToolResult: ({
+    toolCallId,
+    result,
+  }: {
+    toolCallId: string;
+    result: any;
+  }) => void;
   isReadonly: boolean;
   isArtifactVisible: boolean;
 }
@@ -25,6 +33,8 @@ function PureMessages({
   messages,
   setMessages,
   reload,
+  append,
+  addToolResult,
   isReadonly,
 }: MessagesProps) {
   const [messagesContainerRef, messagesEndRef] =
@@ -50,6 +60,8 @@ function PureMessages({
           }
           setMessages={setMessages}
           reload={reload}
+          append={append}
+          addToolResult={addToolResult}
           isReadonly={isReadonly}
         />
       ))}

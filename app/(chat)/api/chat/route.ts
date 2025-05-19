@@ -25,6 +25,9 @@ import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
+import { checkCredits } from '@/lib/ai/tools/check-credits';
+import { buyCredit, executeBuyCredit } from '@/lib/ai/tools/buy-credits';
+import { processToolCalls } from '@/lib/ai/utils';
 
 export const maxDuration = 60;
 
@@ -80,33 +83,50 @@ export async function POST(request: Request) {
     });
 
     return createDataStreamResponse({
-      execute: (dataStream) => {
+      execute: async (dataStream) => {
+        const tools = {
+          buyCredit,
+          checkCredits: checkCredits({ session }),
+          getWeather,
+          createDocument: createDocument({ session, dataStream }),
+          updateDocument: updateDocument({ session, dataStream }),
+          requestSuggestions: requestSuggestions({
+            session,
+            dataStream,
+          }),
+        };
+
+        const proccessedMessages = await processToolCalls(
+          {
+            messages,
+            dataStream,
+            tools,
+          },
+          {
+            buyCredit: executeBuyCredit(session),
+          },
+        );
+
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel }),
-          messages,
+          messages: proccessedMessages,
           maxSteps: 5,
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
               ? []
               : [
+                  'checkCredits',
+                  'buyCredit',
                   'getWeather',
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
                 ],
+          tools,
           experimental_transform: smoothStream({ chunking: 'word' }),
           experimental_generateMessageId: generateUUID,
-          tools: {
-            getWeather,
-            createDocument: createDocument({ session, dataStream }),
-            updateDocument: updateDocument({ session, dataStream }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-            }),
-          },
-          onFinish: async ({ response }) => {
+          onFinish: async ({ response, usage, toolCalls, toolResults }) => {
             if (session.user?.id) {
               try {
                 const assistantId = getTrailingMessageId({

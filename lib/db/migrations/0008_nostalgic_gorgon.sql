@@ -1,0 +1,1 @@
+ALTER TABLE "CreditPurchase" ADD COLUMN "metadata" json;

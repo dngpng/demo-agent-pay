@@ -33,13 +33,13 @@ export const myProvider = isTestEnvironment
     })
   : customProvider({
       languageModels: {
-        'chat-model': openai('gpt-4o'),
+        'chat-model': openai('o4-mini'),
         'chat-model-reasoning': wrapLanguageModel({
           model: openai('o4-mini'),
           middleware: extractReasoningMiddleware({ tagName: 'think' }),
         }),
-        'title-model': openai('gpt-4o-mini'),
-        'artifact-model': openai('gpt-4o-mini'),
+        'title-model': openai('o4-mini'),
+        'artifact-model': openai('o4-mini'),
       },
       imageModels: {
         'small-model': xai.image('grok-2-image'),

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getCreditsByUserId } from '@/lib/db/queries';
 import { auth } from '@/app/(auth)/auth';
 
@@ -13,6 +13,9 @@ export async function GET(req: NextRequest) {
     const balance = await getCreditsByUserId(session.user.id);
     return NextResponse.json({ balance });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch credit balance' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch credit balance' },
+      { status: 500 },
+    );
   }
-} 
+}

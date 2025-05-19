@@ -73,3 +73,43 @@ export function getTrailingMessageId({
 
   return trailingMessage.id;
 }
+
+export const EVM_TOKEN_ADDRESS =
+  process.env.AGENTPAY_EVM_TOKEN_ADDRESS ||
+  '0xb31ff0188118a615AebC106FeCb3f5596D5d61E3'; // Mock USDC on Sepolia
+export const EVM_TOKEN_DECIMALS = process.env.AGENTPAY_EVM_TOKEN_DECIMALS || 6;
+export const EVM_TOKEN_NETWORK =
+  process.env.AGENTPAY_EVM_TOKEN_NETWORK || '11155111'; // Sepolia
+export const XRP_TOKEN_ADDRESS = process.env.AGENTPAY_XRP_TOKEN_ADDRESS || ''; // Empty for Native XRP
+export const XRP_TOKEN_DECIMALS = process.env.AGENTPAY_XRP_TOKEN_DECIMALS || 6;
+export const XRP_TOKEN_NETWORK =
+  process.env.AGENTPAY_XRP_TOKEN_NETWORK || 'xrpl-testnet'; // Testnet
+
+// Temporary conversion ratios (1 credit = X token)
+const CREDIT_TO_EVM_TOKEN_RATIO = 0.01; // 1 credit = 0.01 USDC
+const CREDIT_TO_XRP_TOKEN_RATIO = 0.004; // 1 credit = 0.004 XRP
+
+export function calculateAmountToPay(
+  amountToPurchase: string,
+  provider: 'AgentPay-EVM' | 'AgentPay-XRP',
+): string {
+  const credits = Number(amountToPurchase);
+  if (provider === 'AgentPay-EVM') {
+    return BigInt(
+      credits *
+        CREDIT_TO_EVM_TOKEN_RATIO *
+        Math.pow(10, Number(EVM_TOKEN_DECIMALS)),
+    ).toString();
+  } else if (provider === 'AgentPay-XRP') {
+    return BigInt(
+      credits *
+        CREDIT_TO_XRP_TOKEN_RATIO *
+        Math.pow(10, Number(XRP_TOKEN_DECIMALS)),
+    ).toString();
+  }
+  throw new Error('Unsupported provider');
+}
+
+export function shortenAddress(address: string) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}

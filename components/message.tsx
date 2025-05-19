@@ -18,7 +18,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
-import { UseChatHelpers } from '@ai-sdk/react';
+import type { UseChatHelpers } from '@ai-sdk/react';
+import CreditsCheck from './credits-check';
+import {
+  CreditsPurchaseConfirmation,
+  CreditsPurchaseLink,
+} from './credits-purchase';
+import { APPROVAL } from '@/lib/ai/utils';
 
 const PurePreviewMessage = ({
   chatId,
@@ -27,6 +33,8 @@ const PurePreviewMessage = ({
   isLoading,
   setMessages,
   reload,
+  append,
+  addToolResult,
   isReadonly,
 }: {
   chatId: string;
@@ -35,6 +43,14 @@ const PurePreviewMessage = ({
   isLoading: boolean;
   setMessages: UseChatHelpers['setMessages'];
   reload: UseChatHelpers['reload'];
+  append: UseChatHelpers['append'];
+  addToolResult: ({
+    toolCallId,
+    result,
+  }: {
+    toolCallId: string;
+    result: any;
+  }) => void;
   isReadonly: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -176,6 +192,22 @@ const PurePreviewMessage = ({
                           args={args}
                           isReadonly={isReadonly}
                         />
+                      ) : toolName === 'buyCredit' ? (
+                        <CreditsPurchaseConfirmation
+                          args={args}
+                          onConfirm={() =>
+                            addToolResult({
+                              toolCallId,
+                              result: APPROVAL.YES,
+                            })
+                          }
+                          onCancel={() =>
+                            addToolResult({
+                              toolCallId,
+                              result: APPROVAL.NO,
+                            })
+                          }
+                        />
                       ) : null}
                     </div>
                   );
@@ -205,6 +237,18 @@ const PurePreviewMessage = ({
                           result={result}
                           isReadonly={isReadonly}
                         />
+                      ) : toolName === 'checkCredits' ? (
+                        <CreditsCheck
+                          result={result}
+                          onSubmit={(amount, paymentMethod) => {
+                            append({
+                              role: 'user',
+                              content: `Buy ${amount} credits using ${paymentMethod.method} (Payment Method ID: ${paymentMethod.id})`,
+                            });
+                          }}
+                        />
+                      ) : toolName === 'buyCredit' ? (
+                        <CreditsPurchaseLink result={result} />
                       ) : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>
                       )}

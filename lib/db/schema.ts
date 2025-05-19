@@ -158,7 +158,9 @@ export const userCredit = pgTable(
     userId: uuid('userId')
       .notNull()
       .references(() => user.id),
-    balance: numeric('balance', { precision: 20, scale: 2 }).notNull().default('0'),
+    balance: numeric('balance', { precision: 20, scale: 2 })
+      .notNull()
+      .default('0'),
     updatedAt: timestamp('updatedAt').notNull(),
   },
   (table) => ({
@@ -176,7 +178,9 @@ export const creditTransaction = pgTable(
       .notNull()
       .references(() => user.id),
     amount: numeric('amount', { precision: 20, scale: 2 }).notNull(),
-    type: varchar('type', { enum: ['purchase', 'spend', 'refund', 'adjustment'] }).notNull(),
+    type: varchar('type', {
+      enum: ['purchase', 'spend', 'refund', 'adjustment'],
+    }).notNull(),
     description: text('description'),
     referenceId: uuid('referenceId'), // Optional: link to another entity (e.g. order, payment)
     createdAt: timestamp('createdAt').notNull(),
@@ -196,12 +200,18 @@ export const creditPurchase = pgTable(
       .notNull()
       .references(() => user.id),
     amount: numeric('amount', { precision: 20, scale: 2 }).notNull(),
-    status: varchar('status', { enum: ['pending', 'completed', 'failed'] }).notNull(),
+    status: varchar('status', {
+      enum: ['pending', 'completed', 'failed', 'cancelled'],
+    }).notNull(),
+    paymentMethodId: uuid('paymentMethodId')
+      .notNull()
+      .references(() => userPaymentMethod.id),
     provider: varchar('provider', { length: 64 }).notNull(),
     providerReference: varchar('providerReference', { length: 128 }),
     description: text('description'),
     createdAt: timestamp('createdAt').notNull(),
     completedAt: timestamp('completedAt'), // Nullable, only set when completed
+    metadata: json('metadata'),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id] }),
@@ -209,3 +219,25 @@ export const creditPurchase = pgTable(
 );
 
 export type CreditPurchase = InferSelectModel<typeof creditPurchase>;
+
+export const userPaymentMethod = pgTable(
+  'UserPaymentMethod',
+  {
+    id: uuid('id').notNull().defaultRandom(),
+    userId: uuid('userId')
+      .notNull()
+      .references(() => user.id),
+    method: varchar('method', {
+      enum: ['AgentPay-EVM', 'AgentPay-XRP'],
+    }).notNull(),
+    reference: varchar('reference', { length: 256 }).notNull(),
+    createdAt: timestamp('createdAt').notNull(),
+    updatedAt: timestamp('updatedAt').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.id] }),
+    userRef: foreignKey({ columns: [table.userId], foreignColumns: [user.id] }),
+  }),
+);
+
+export type UserPaymentMethod = InferSelectModel<typeof userPaymentMethod>;

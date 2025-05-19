@@ -37,6 +37,7 @@ function PureMultimodalInput({
   append,
   handleSubmit,
   className,
+  disabled = false,
 }: {
   chatId: string;
   input: UseChatHelpers['input'];
@@ -50,6 +51,7 @@ function PureMultimodalInput({
   append: UseChatHelpers['append'];
   handleSubmit: UseChatHelpers['handleSubmit'];
   className?: string;
+  disabled?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -194,6 +196,7 @@ function PureMultimodalInput({
         multiple
         onChange={handleFileChange}
         tabIndex={-1}
+        disabled={disabled}
       />
 
       {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -231,6 +234,7 @@ function PureMultimodalInput({
         )}
         rows={2}
         autoFocus
+        disabled={disabled}
         onKeyDown={(event) => {
           if (
             event.key === 'Enter' &&
@@ -260,6 +264,7 @@ function PureMultimodalInput({
             input={input}
             submitForm={submitForm}
             uploadQueue={uploadQueue}
+            disabled={disabled}
           />
         )}
       </div>
@@ -331,10 +336,12 @@ function PureSendButton({
   submitForm,
   input,
   uploadQueue,
+  disabled,
 }: {
   submitForm: () => void;
   input: string;
   uploadQueue: Array<string>;
+  disabled: boolean;
 }) {
   return (
     <Button
@@ -344,7 +351,7 @@ function PureSendButton({
         event.preventDefault();
         submitForm();
       }}
-      disabled={input.length === 0 || uploadQueue.length > 0}
+      disabled={input.length === 0 || uploadQueue.length > 0 || disabled}
     >
       <ArrowUpIcon size={14} />
     </Button>
