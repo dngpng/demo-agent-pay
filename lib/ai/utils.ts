@@ -53,10 +53,13 @@ export async function processToolCalls<
       context: ToolExecutionOptions,
     ) => Promise<any>;
   },
+  onProcessed?: (message: Message) => Promise<void>,
 ): Promise<Message[]> {
   const lastMessage = messages[messages.length - 1];
   const parts = lastMessage.parts;
   if (!parts) return messages;
+
+  let processed = false;
 
   const processedParts = await Promise.all(
     parts.map(async (part) => {
@@ -97,6 +100,8 @@ export async function processToolCalls<
         return part;
       }
 
+      processed = true;
+
       // Forward updated tool result to the client.
       dataStream.write(
         formatDataStreamPart('tool_result', {
@@ -115,6 +120,10 @@ export async function processToolCalls<
       };
     }),
   );
+
+  if (processed && onProcessed) {
+    await onProcessed({ ...lastMessage, parts: processedParts });
+  }
 
   // Finally return the processed messages
   return [...messages.slice(0, -1), { ...lastMessage, parts: processedParts }];

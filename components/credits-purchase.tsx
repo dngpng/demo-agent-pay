@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import type { BuyCreditParams } from '@/lib/ai/tools/buy-credits';
 import Link from 'next/link';
 import { useState } from 'react';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react';
 
 export function CreditsPurchaseConfirmation({
   args,
@@ -89,12 +89,14 @@ export function CreditsPurchaseLink({
   const id = typeof result === 'string' ? null : result.id;
   const fallbackData = typeof result === 'string' ? undefined : result;
 
+  console.log({ result });
+
   const {
     data: purchase,
     isLoading,
     error,
   } = useSWR<CreditPurchase>(`/api/purchase/${id}`, fetcher, {
-    isPaused: () => id !== null,
+    isPaused: () => id === null,
     fallbackData,
     refreshInterval: (data) => {
       if (data?.status === 'pending') {
@@ -164,6 +166,7 @@ export function CreditsPurchaseLink({
 
         {isPaying ? (
           <Button disabled={true} className="">
+            <Loader2 className="animate-spin" />
             Waiting for confirmation ...
           </Button>
         ) : (
@@ -186,7 +189,7 @@ function formatPaymentAmount(
 ) {
   return (
     <>
-      <span className="font-bold">
+      <span className="font-bold mr-1">
         {Number(calculateAmountToPay(creditAmount, method)) / Math.pow(10, 6)}
       </span>
       <span>{method === 'AgentPay-EVM' ? 'USDC' : 'XRP'}</span>

@@ -206,12 +206,14 @@ export const creditPurchase = pgTable(
     paymentMethodId: uuid('paymentMethodId')
       .notNull()
       .references(() => userPaymentMethod.id),
+    chatId: uuid('chatId').references(() => chat.id),
+    messageId: uuid('messageId').references(() => message.id),
     provider: varchar('provider', { length: 64 }).notNull(),
     providerReference: varchar('providerReference', { length: 128 }),
     description: text('description'),
     createdAt: timestamp('createdAt').notNull(),
     completedAt: timestamp('completedAt'), // Nullable, only set when completed
-    metadata: json('metadata'),
+    metadata: json('metadata').$type<Record<string, any>>(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.id] }),

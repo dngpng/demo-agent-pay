@@ -64,6 +64,13 @@
       "when": 1747635154420,
       "tag": "0008_nostalgic_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1748436667464,
+      "tag": "0009_fuzzy_nighthawk",
+      "breakpoints": true
     }
   ]
 }

@@ -55,6 +55,13 @@ const PurePreviewMessage = ({
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
+  const buyCreditMessageResolved = message.parts?.some(
+    (part) =>
+      part.type === 'tool-invocation' &&
+      part.toolInvocation.toolName === 'buyCredit' &&
+      part.toolInvocation.state === 'result',
+  );
+
   return (
     <AnimatePresence>
       <motion.div
@@ -110,7 +117,7 @@ const PurePreviewMessage = ({
                 );
               }
 
-              if (type === 'text') {
+              if (type === 'text' && !buyCreditMessageResolved) {
                 if (mode === 'view') {
                   return (
                     <div key={key} className="flex flex-row gap-2 items-start">
@@ -244,8 +251,8 @@ const PurePreviewMessage = ({
                           result={result}
                           onSubmit={(amount, paymentMethod) => {
                             append({
-                              role: 'user',
-                              content: `Buy ${amount} credits using ${paymentMethod.method} (Payment Method ID: ${paymentMethod.id})`,
+                              role: 'system',
+                              content: `User decided to buy ${amount} credits using Payment Method with ID: ${paymentMethod.id})`,
                             });
                           }}
                         />

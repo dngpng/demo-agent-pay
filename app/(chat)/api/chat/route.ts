@@ -13,6 +13,7 @@ import {
   getCreditsByUserId,
   saveChat,
   saveMessages,
+  updateMessage,
   updateUserCredit,
 } from '@/lib/db/queries';
 import {
@@ -31,6 +32,7 @@ import { checkCredits } from '@/lib/ai/tools/check-credits';
 import { buyCredit, executeBuyCredit } from '@/lib/ai/tools/buy-credits';
 import { processToolCalls } from '@/lib/ai/utils';
 import { getPaymentMethods } from '@/lib/ai/tools/get-payment-methods';
+import { partialDeepStrictEqual } from 'node:assert';
 
 export const maxDuration = 60;
 
@@ -107,7 +109,33 @@ export async function POST(request: Request) {
             tools,
           },
           {
-            buyCredit: executeBuyCredit(session),
+            buyCredit: executeBuyCredit(session, id, userMessage.id),
+          },
+          async (processedMessage) => {
+            console.log(
+              'user confirmed tool call executed, messageId: ',
+              processedMessage.id,
+            );
+
+            const message = messages.find(
+              (item) => item.id === processedMessage.id,
+            );
+
+            if (message) {
+              console.log(
+                'user confirmed tool call executed, found previous message to update: ',
+                message.id,
+              );
+              await updateMessage({
+                id: message.id,
+                parts: processedMessage.parts,
+              });
+            } else {
+              console.log(
+                'user confirmed tool call executed, but no previous message found to update: ',
+                processedMessage.id,
+              );
+            }
           },
         );
 

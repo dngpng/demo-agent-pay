@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   getPurchaseByPaymentId,
   updateCreditPurchase,
+  updatePurchaseChat,
   updateUserCredit,
 } from '@/lib/db/queries';
 import { verifySignature } from '@/lib/signature';
@@ -105,34 +106,27 @@ async function handlePurchase({
   }
 
   try {
-    if (status === 'success') {
-      await updateCreditPurchase({
-        id: purchase.id,
-        status: 'completed',
-        metadata: {
-          txnHash,
-        },
-      });
-      await updateUserCredit({
-        userId: purchase.userId,
-        amount: purchase.amount,
-        type: 'purchase',
-        description: `Purchase ${purchase.id}`,
-        referenceId: purchase.id,
-      });
-    } else if (status === 'cancelled') {
-      await updateCreditPurchase({
-        id: purchase.id,
-        status: 'cancelled',
-        metadata: {},
-      });
-    } else if (status === 'failed') {
-      await updateCreditPurchase({
-        id: purchase.id,
-        status: 'failed',
-        metadata: {},
-      });
-    }
+    await updateCreditPurchase({
+      id: purchase.id,
+      status: status === 'success' ? 'completed' : status,
+      metadata: {
+        ...purchase.metadata,
+        txnHash,
+      },
+      onUpdate: async (purchase) => {
+        await updatePurchaseChat(purchase);
+
+        if (purchase.status === 'completed') {
+          await updateUserCredit({
+            userId: purchase.userId,
+            amount: purchase.amount,
+            description: `Purchase ${purchase.id}`,
+            type: 'purchase',
+            referenceId: purchase.id,
+          });
+        }
+      },
+    });
 
     console.info(
       `[Callback] purchase with paymentId:${paymentId} updated to status:${status}`,

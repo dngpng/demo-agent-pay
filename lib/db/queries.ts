@@ -34,6 +34,8 @@ import {
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateHashedPassword } from './utils';
+import type { Message } from 'ai';
+import { generateUUID } from '../utils';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -188,6 +190,21 @@ export async function saveMessages({
     return await db.insert(message).values(messages).onConflictDoNothing();
   } catch (error) {
     console.error('Failed to save messages in database', error);
+    throw error;
+  }
+}
+
+export async function updateMessage({
+  id,
+  parts,
+}: {
+  id: string;
+  parts: Message['parts'];
+}) {
+  try {
+    return await db.update(message).set({ parts }).where(eq(message.id, id));
+  } catch (error) {
+    console.error('Failed to update message in database', error);
     throw error;
   }
 }
@@ -522,6 +539,8 @@ export async function createCreditPurchase({
   paymentMethodId,
   provider,
   providerReference,
+  chatId,
+  messageId,
 }: {
   userId: string;
   amount: string;
@@ -529,6 +548,8 @@ export async function createCreditPurchase({
   paymentMethodId: string;
   provider: 'AgentPay-EVM' | 'AgentPay-XRP';
   providerReference: string;
+  chatId?: string;
+  messageId?: string;
 }) {
   try {
     return await db
@@ -542,6 +563,8 @@ export async function createCreditPurchase({
         providerReference,
         createdAt: new Date(),
         status: 'pending',
+        chatId,
+        messageId,
       })
       .returning();
   } catch (error) {
@@ -567,16 +590,27 @@ export async function updateCreditPurchase({
   id,
   status,
   metadata,
+  onUpdate,
 }: {
   id: string;
   status: CreditPurchase['status'];
   metadata: Record<string, any>;
+  onUpdate?: (purchase: CreditPurchase) => Promise<void>;
 }) {
   try {
-    return await db
-      .update(creditPurchase)
-      .set({ status, metadata })
-      .where(eq(creditPurchase.id, id));
+    return await db.transaction(async (tx) => {
+      const [updatedRecord] = await tx
+        .update(creditPurchase)
+        .set({ status, metadata })
+        .where(eq(creditPurchase.id, id))
+        .returning();
+
+      if (onUpdate) {
+        await onUpdate(updatedRecord);
+      }
+
+      return updatedRecord;
+    });
   } catch (error) {
     console.error('Failed to update credit purchase in database', error);
     throw error;
@@ -610,6 +644,31 @@ export async function getUserPaymentMethods(userId: string) {
       .where(eq(userPaymentMethod.userId, userId));
   } catch (error) {
     console.error('Failed to get user payment methods from database', error);
+    throw error;
+  }
+}
+
+export async function updatePurchaseChat(creditPurchase: CreditPurchase) {
+  try {
+    const { chatId, messageId } = creditPurchase;
+
+    if (chatId) {
+      await db.insert(message).values({
+        chatId,
+        role: 'system',
+        createdAt: new Date(),
+        attachments: [],
+        parts: [
+          {
+            type: 'text',
+            text: `User's credit purchase with id: $${creditPurchase.id} is updated to status "${creditPurchase.status}". ${creditPurchase.status === 'completed' ? "The credit is transferred to the user's account." : ''}`,
+          },
+        ],
+        id: generateUUID(),
+      });
+    }
+  } catch (error) {
+    console.error('Failed to update purchase chat in database', error);
     throw error;
   }
 }

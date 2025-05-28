@@ -17,7 +17,7 @@ export interface BuyCreditParams {
 }
 
 export const executeBuyCredit =
-  (session: Session) =>
+  (session: Session, chatId: string, messageId: string) =>
   async ({ paymentMethodId, amountToPurchase }: BuyCreditParams) => {
     const userId = session.user?.id;
     if (!userId) throw new Error('User not authenticated');
