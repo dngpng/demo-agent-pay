@@ -207,8 +207,12 @@ export const creditPurchase = pgTable(
     paymentMethodId: uuid('paymentMethodId')
       .notNull()
       .references(() => userPaymentMethod.id),
-    chatId: uuid('chatId').references(() => chat.id),
-    messageId: uuid('messageId').references(() => message.id),
+    chatId: uuid('chatId').references(() => chat.id, {
+      onDelete: 'cascade',
+    }),
+    messageId: uuid('messageId').references(() => message.id, {
+      onDelete: 'cascade',
+    }),
     provider: varchar('provider', { length: 64 }).notNull(),
     providerReference: varchar('providerReference', { length: 128 }),
     description: text('description'),

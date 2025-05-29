@@ -61,6 +61,7 @@ function PureArtifactMessages({
           isReadonly={isReadonly}
           addToolResult={addToolResult}
           append={append}
+          isLast={index === messages.length - 1}
         />
       ))}
 
