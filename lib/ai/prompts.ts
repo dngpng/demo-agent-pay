@@ -109,3 +109,13 @@ Improve the following spreadsheet based on the given prompt.
 ${currentContent}
 `
         : '';
+
+export const purchaseIntentionPrompt = (
+  amount: string,
+  paymentMethodId: string,
+) =>
+  `User intends to buy ${amount} credits using Payment Method with ID: ${paymentMethodId})`;
+
+export const purchaseResolvedPrompt = (id: string, status: string) =>
+  `User's credit purchase with id: ${id} is updated to status "${status}".
+  Tell the user about the purchase status. And continue with the user's request if there is any.`;

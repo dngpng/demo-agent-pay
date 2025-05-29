@@ -26,6 +26,10 @@ import {
 } from './credits-purchase';
 import { APPROVAL } from '@/lib/ai/utils';
 import { Loader2 } from 'lucide-react';
+import {
+  purchaseIntentionPrompt,
+  purchaseResolvedPrompt,
+} from '@/lib/ai/prompts';
 
 const PurePreviewMessage = ({
   chatId,
@@ -249,15 +253,19 @@ const PurePreviewMessage = ({
                         key={toolCallId}
                         result={result}
                         onSubmit={(amount, paymentMethod) => {
-                          const systemMessage = `User intends to buy ${amount} credits using Payment Method with ID: ${paymentMethod.id})`;
+                          const message = purchaseIntentionPrompt(
+                            amount,
+                            paymentMethod.id,
+                          );
+
                           append({
                             role: 'system',
-                            content: systemMessage,
+                            content: message,
                             experimental_attachments: [],
                             parts: [
                               {
                                 type: 'text',
-                                text: systemMessage,
+                                text: message,
                               },
                             ],
                             id: generateUUID(),
@@ -298,16 +306,19 @@ const PurePreviewMessage = ({
                               result: purchase,
                             });
 
-                            const systemMessage = `User's credit purchase with id: ${purchase.id} is updated to status "${purchase.status}". ${purchase.status === 'completed' ? "The credit is transferred to the user's account." : ''}`;
+                            const message = purchaseResolvedPrompt(
+                              purchase.id,
+                              purchase.status,
+                            );
 
                             append({
                               role: 'system',
-                              content: systemMessage,
+                              content: message,
                               experimental_attachments: [],
                               parts: [
                                 {
                                   type: 'text',
-                                  text: systemMessage,
+                                  text: message,
                                 },
                               ],
                               id: generateUUID(),
