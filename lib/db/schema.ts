@@ -1,3 +1,4 @@
+import type { UIMessage } from 'ai';
 import type { InferSelectModel } from 'drizzle-orm';
 import {
   pgTable,
@@ -54,7 +55,7 @@ export const message = pgTable('Message_v2', {
     .notNull()
     .references(() => chat.id),
   role: varchar('role').notNull(),
-  parts: json('parts').notNull(),
+  parts: json('parts').notNull().$type<UIMessage['parts'] | undefined>(),
   attachments: json('attachments').notNull(),
   createdAt: timestamp('createdAt').notNull(),
 });

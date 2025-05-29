@@ -14,28 +14,27 @@ import {
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-import {
-  user,
-  chat,
-  type User,
-  document,
-  type Suggestion,
-  suggestion,
-  message,
-  vote,
-  type DBMessage,
-  type Chat,
-  userCredit,
-  creditTransaction,
-  type CreditTransaction,
-  creditPurchase,
-  userPaymentMethod,
-  type CreditPurchase,
-} from './schema';
 import type { ArtifactKind } from '@/components/artifact';
-import { generateHashedPassword } from './utils';
 import type { Message } from 'ai';
-import { generateUUID } from '../utils';
+import {
+  chat,
+  creditPurchase,
+  creditTransaction,
+  document,
+  message,
+  suggestion,
+  user,
+  userCredit,
+  userPaymentMethod,
+  vote,
+  type Chat,
+  type CreditPurchase,
+  type CreditTransaction,
+  type DBMessage,
+  type Suggestion,
+  type User,
+} from './schema';
+import { generateHashedPassword } from './utils';
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -601,7 +600,11 @@ export async function updateCreditPurchase({
     return await db.transaction(async (tx) => {
       const [updatedRecord] = await tx
         .update(creditPurchase)
-        .set({ status, metadata })
+        .set({
+          status,
+          metadata,
+          completedAt: status === 'completed' ? new Date() : null,
+        })
         .where(eq(creditPurchase.id, id))
         .returning();
 
@@ -652,20 +655,41 @@ export async function updatePurchaseChat(creditPurchase: CreditPurchase) {
   try {
     const { chatId, messageId } = creditPurchase;
 
-    if (chatId) {
-      await db.insert(message).values({
-        chatId,
-        role: 'system',
-        createdAt: new Date(),
-        attachments: [],
-        parts: [
-          {
-            type: 'text',
-            text: `User's credit purchase with id: $${creditPurchase.id} is updated to status "${creditPurchase.status}". ${creditPurchase.status === 'completed' ? "The credit is transferred to the user's account." : ''}`,
-          },
-        ],
-        id: generateUUID(),
-      });
+    if (chatId && messageId) {
+      const [purchaseMessage] = await getMessageById({ id: messageId });
+
+      if (purchaseMessage) {
+        updateMessage({
+          id: messageId,
+          parts: purchaseMessage.parts?.map((part) =>
+            part.type === 'tool-invocation' &&
+            part.toolInvocation.toolName === 'buyCredit' &&
+            part.toolInvocation.state === 'result'
+              ? {
+                  ...part,
+                  toolInvocation: {
+                    ...part.toolInvocation,
+                    result: creditPurchase,
+                  },
+                }
+              : part,
+          ),
+        });
+      }
+
+      // await db.insert(message).values({
+      //   chatId,
+      //   role: 'system',
+      //   createdAt: new Date(),
+      //   attachments: [],
+      //   parts: [
+      //     {
+      //       type: 'text',
+      //       text: `User's credit purchase with id: ${creditPurchase.id} is updated to status "${creditPurchase.status}". ${creditPurchase.status === 'completed' ? "The credit is transferred to the user's account." : ''}`,
+      //     },
+      //   ],
+      //   id: generateUUID(),
+      // });
     }
   } catch (error) {
     console.error('Failed to update purchase chat in database', error);

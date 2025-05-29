@@ -1,12 +1,15 @@
-import {
-  type UIMessage,
-  appendResponseMessages,
-  createDataStreamResponse,
-  smoothStream,
-  streamText,
-} from 'ai';
 import { auth } from '@/app/(auth)/auth';
 import { systemPrompt } from '@/lib/ai/prompts';
+import { myProvider } from '@/lib/ai/providers';
+import { buyCredit, executeBuyCredit } from '@/lib/ai/tools/buy-credits';
+import { checkCredits } from '@/lib/ai/tools/check-credits';
+import { createDocument } from '@/lib/ai/tools/create-document';
+import { getPaymentMethods } from '@/lib/ai/tools/get-payment-methods';
+import { getWeather } from '@/lib/ai/tools/get-weather';
+import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
+import { updateDocument } from '@/lib/ai/tools/update-document';
+import { processToolCalls } from '@/lib/ai/utils';
+import { isProductionEnvironment } from '@/lib/constants';
 import {
   deleteChatById,
   getChatById,
@@ -18,21 +21,18 @@ import {
 } from '@/lib/db/queries';
 import {
   generateUUID,
+  getMostRecentSystemMessage,
   getMostRecentUserMessage,
   getTrailingMessageId,
 } from '@/lib/utils';
+import {
+  type UIMessage,
+  appendResponseMessages,
+  createDataStreamResponse,
+  smoothStream,
+  streamText,
+} from 'ai';
 import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { getWeather } from '@/lib/ai/tools/get-weather';
-import { isProductionEnvironment } from '@/lib/constants';
-import { myProvider } from '@/lib/ai/providers';
-import { checkCredits } from '@/lib/ai/tools/check-credits';
-import { buyCredit, executeBuyCredit } from '@/lib/ai/tools/buy-credits';
-import { processToolCalls } from '@/lib/ai/utils';
-import { getPaymentMethods } from '@/lib/ai/tools/get-payment-methods';
-import { partialDeepStrictEqual } from 'node:assert';
 
 export const maxDuration = 60;
 
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     const userMessage = getMostRecentUserMessage(messages);
+    const systemMessage = getMostRecentSystemMessage(messages);
 
     if (!userMessage) {
       return new Response('No user message found', { status: 400 });
@@ -74,17 +75,30 @@ export async function POST(request: Request) {
       }
     }
 
+    const messagesToSave = [
+      {
+        chatId: id,
+        id: userMessage.id,
+        role: 'user',
+        parts: userMessage.parts,
+        attachments: userMessage.experimental_attachments ?? [],
+        createdAt: new Date(),
+      },
+    ];
+
+    if (systemMessage) {
+      messagesToSave.push({
+        chatId: id,
+        id: systemMessage.id,
+        role: 'system',
+        parts: systemMessage.parts,
+        attachments: [],
+        createdAt: new Date(),
+      });
+    }
+
     await saveMessages({
-      messages: [
-        {
-          chatId: id,
-          id: userMessage.id,
-          role: 'user',
-          parts: userMessage.parts,
-          attachments: userMessage.experimental_attachments ?? [],
-          createdAt: new Date(),
-        },
-      ],
+      messages: messagesToSave,
     });
 
     return createDataStreamResponse({
@@ -109,32 +123,22 @@ export async function POST(request: Request) {
             tools,
           },
           {
-            buyCredit: executeBuyCredit(session, id, userMessage.id),
+            buyCredit: executeBuyCredit(
+              session,
+              id,
+              messages[messages.length - 1].id,
+            ),
           },
           async (processedMessage) => {
-            console.log(
-              'user confirmed tool call executed, messageId: ',
-              processedMessage.id,
-            );
-
             const message = messages.find(
               (item) => item.id === processedMessage.id,
             );
 
             if (message) {
-              console.log(
-                'user confirmed tool call executed, found previous message to update: ',
-                message.id,
-              );
               await updateMessage({
                 id: message.id,
                 parts: processedMessage.parts,
               });
-            } else {
-              console.log(
-                'user confirmed tool call executed, but no previous message found to update: ',
-                processedMessage.id,
-              );
             }
           },
         );

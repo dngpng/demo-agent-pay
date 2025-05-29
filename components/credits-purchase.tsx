@@ -85,11 +85,13 @@ export function CreditsPurchaseConfirmation({
 
 export function CreditsPurchaseLink({
   result,
-}: { result: CreditPurchase | string }) {
+  onSettle,
+}: {
+  result: CreditPurchase | string;
+  onSettle?: (purchase: CreditPurchase) => void;
+}) {
   const id = typeof result === 'string' ? null : result.id;
   const fallbackData = typeof result === 'string' ? undefined : result;
-
-  console.log({ result });
 
   const {
     data: purchase,
@@ -108,6 +110,14 @@ export function CreditsPurchaseLink({
   });
 
   const [isPaying, setIsPaying] = useState(false);
+
+  if (
+    isPaying &&
+    (purchase?.status === 'completed' || purchase?.status === 'failed')
+  ) {
+    setIsPaying(false);
+    onSettle?.(purchase);
+  }
 
   if (typeof result === 'string') {
     return (

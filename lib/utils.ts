@@ -52,6 +52,14 @@ export function getMostRecentUserMessage(messages: Array<UIMessage>) {
   return userMessages.at(-1);
 }
 
+export function getMostRecentSystemMessage(messages: Array<UIMessage>) {
+  const systemMessages = messages.filter(
+    (message) => message.role === 'system',
+  );
+
+  return systemMessages.at(-1);
+}
+
 export function getDocumentTimestampByIndex(
   documents: Array<Document>,
   index: number,

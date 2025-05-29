@@ -65,7 +65,11 @@ export const executeBuyCredit =
       description,
       provider,
       providerReference: payment.id,
+      chatId,
+      messageId,
     });
+
+    console.log('purchase created: ', purchase.id, 'payment: ', payment.id);
 
     return purchase;
   };

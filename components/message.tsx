@@ -12,7 +12,7 @@ import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import { Weather } from './weather';
 import equal from 'fast-deep-equal';
-import { cn } from '@/lib/utils';
+import { cn, generateUUID } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
@@ -25,6 +25,7 @@ import {
   CreditsPurchaseLink,
 } from './credits-purchase';
 import { APPROVAL } from '@/lib/ai/utils';
+import { Loader2 } from 'lucide-react';
 
 const PurePreviewMessage = ({
   chatId,
@@ -36,6 +37,7 @@ const PurePreviewMessage = ({
   append,
   addToolResult,
   isReadonly,
+  isLast,
 }: {
   chatId: string;
   message: UIMessage;
@@ -52,15 +54,27 @@ const PurePreviewMessage = ({
     result: any;
   }) => void;
   isReadonly: boolean;
+  isLast: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
-  const buyCreditMessageResolved = message.parts?.some(
-    (part) =>
-      part.type === 'tool-invocation' &&
-      part.toolInvocation.toolName === 'buyCredit' &&
-      part.toolInvocation.state === 'result',
-  );
+  if (message.role === 'system') {
+    return isLast ? (
+      <div className="flex justify-center items-center py-4">
+        <Loader2 className="animate-spin" />
+      </div>
+    ) : null;
+  }
+
+  if (
+    message.parts.every(
+      (part) =>
+        (part.type === 'text' && part.text === '') ||
+        part.type === 'step-start',
+    )
+  ) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
@@ -89,19 +103,20 @@ const PurePreviewMessage = ({
           )}
 
           <div className="flex flex-col gap-4 w-full">
-            {message.experimental_attachments && (
-              <div
-                data-testid={`message-attachments`}
-                className="flex flex-row justify-end gap-2"
-              >
-                {message.experimental_attachments.map((attachment) => (
-                  <PreviewAttachment
-                    key={attachment.url}
-                    attachment={attachment}
-                  />
-                ))}
-              </div>
-            )}
+            {message.experimental_attachments &&
+              message.experimental_attachments.length > 0 && (
+                <div
+                  data-testid={`message-attachments`}
+                  className="flex flex-row justify-end gap-2"
+                >
+                  {message.experimental_attachments.map((attachment) => (
+                    <PreviewAttachment
+                      key={attachment.url}
+                      attachment={attachment}
+                    />
+                  ))}
+                </div>
+              )}
 
             {message.parts?.map((part, index) => {
               const { type } = part;
@@ -117,7 +132,10 @@ const PurePreviewMessage = ({
                 );
               }
 
-              if (type === 'text' && !buyCreditMessageResolved) {
+              if (type === 'text') {
+                if (part.text === '') {
+                  return null;
+                }
                 if (mode === 'view') {
                   return (
                     <div key={key} className="flex flex-row gap-2 items-start">
@@ -225,6 +243,31 @@ const PurePreviewMessage = ({
                 if (state === 'result') {
                   const { result } = toolInvocation;
 
+                  if (toolInvocation.toolName === 'checkCredits') {
+                    return (
+                      <CreditsCheck
+                        key={toolCallId}
+                        result={result}
+                        onSubmit={(amount, paymentMethod) => {
+                          const systemMessage = `User intends to buy ${amount} credits using Payment Method with ID: ${paymentMethod.id})`;
+                          append({
+                            role: 'system',
+                            content: systemMessage,
+                            experimental_attachments: [],
+                            parts: [
+                              {
+                                type: 'text',
+                                text: systemMessage,
+                              },
+                            ],
+                            id: generateUUID(),
+                            createdAt: new Date(),
+                          });
+                        }}
+                      />
+                    );
+                  }
+
                   return (
                     <div key={toolCallId}>
                       {toolName === 'getWeather' ? (
@@ -246,18 +289,32 @@ const PurePreviewMessage = ({
                           result={result}
                           isReadonly={isReadonly}
                         />
-                      ) : toolName === 'checkCredits' ? (
-                        <CreditsCheck
+                      ) : toolName === 'buyCredit' ? (
+                        <CreditsPurchaseLink
                           result={result}
-                          onSubmit={(amount, paymentMethod) => {
+                          onSettle={(purchase) => {
+                            addToolResult({
+                              toolCallId: toolCallId,
+                              result: purchase,
+                            });
+
+                            const systemMessage = `User's credit purchase with id: ${purchase.id} is updated to status "${purchase.status}". ${purchase.status === 'completed' ? "The credit is transferred to the user's account." : ''}`;
+
                             append({
                               role: 'system',
-                              content: `User decided to buy ${amount} credits using Payment Method with ID: ${paymentMethod.id})`,
+                              content: systemMessage,
+                              experimental_attachments: [],
+                              parts: [
+                                {
+                                  type: 'text',
+                                  text: systemMessage,
+                                },
+                              ],
+                              id: generateUUID(),
+                              createdAt: new Date(),
                             });
                           }}
                         />
-                      ) : toolName === 'buyCredit' ? (
-                        <CreditsPurchaseLink result={result} />
                       ) : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>
                       )}
@@ -290,6 +347,7 @@ export const PreviewMessage = memo(
     if (prevProps.message.id !== nextProps.message.id) return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
     if (!equal(prevProps.vote, nextProps.vote)) return false;
+    if (prevProps.isLast !== nextProps.isLast) return false;
 
     return true;
   },

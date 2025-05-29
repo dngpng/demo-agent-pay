@@ -47,26 +47,25 @@ function PureMessages({
     >
       {messages.length === 0 && <Greeting />}
 
-      {messages
-        .filter((message) => message.role !== 'system')
-        .map((message, index) => (
-          <PreviewMessage
-            key={message.id}
-            chatId={chatId}
-            message={message}
-            isLoading={status === 'streaming' && messages.length - 1 === index}
-            vote={
-              votes
-                ? votes.find((vote) => vote.messageId === message.id)
-                : undefined
-            }
-            setMessages={setMessages}
-            reload={reload}
-            append={append}
-            addToolResult={addToolResult}
-            isReadonly={isReadonly}
-          />
-        ))}
+      {messages.map((message, index) => (
+        <PreviewMessage
+          key={message.id}
+          chatId={chatId}
+          message={message}
+          isLoading={status === 'streaming' && messages.length - 1 === index}
+          vote={
+            votes
+              ? votes.find((vote) => vote.messageId === message.id)
+              : undefined
+          }
+          setMessages={setMessages}
+          reload={reload}
+          append={append}
+          addToolResult={addToolResult}
+          isReadonly={isReadonly}
+          isLast={index === messages.length - 1}
+        />
+      ))}
 
       {status === 'submitted' &&
         messages.length > 0 &&
